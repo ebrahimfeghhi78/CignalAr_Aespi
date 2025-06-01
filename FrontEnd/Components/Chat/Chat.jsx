@@ -3,13 +3,15 @@
 
 import React, {useEffect, useState, useCallback} from 'react'; // useCallback اضافه شد
 import {Container, Row, Col, Card, Alert} from 'react-bootstrap'; // Alert برای نمایش خطا
-import { useChat } from '../../hooks/useChat';
+import {useChat} from '../../hooks/useChat';
 import ChatRoomList from './ChatRoomList.jsx';
 import MessageList from './MessageList.jsx';
 import MessageInput from './MessageInput.jsx';
 import NewRoomModal from './NewRoomModal.jsx';
 import ConnectionStatus from './ConnectionStatus'; // برای نمایش وضعیت اتصال
 import OnlineUsers from './OnlineUsers'; // برای نمایش کاربران آنلاین
+import ForwardMessageModal from './ForwardMessageModal';
+import TypingIndicatorComponent from './TypingIndicator';
 
 const Chat = ({forceRoomId}) => {
   const {
@@ -17,6 +19,7 @@ const Chat = ({forceRoomId}) => {
     rooms,
     messages,
     typingUsers,
+    currentLoggedInUserId,
     isLoading,
     error,
     isConnected,
@@ -26,6 +29,9 @@ const Chat = ({forceRoomId}) => {
     setCurrentRoom,
     loadOnlineUsers,
     clearError, // توابع از کانتکست
+    isForwardModalVisible,
+    hideForwardModal,
+    messageIdToForward,
   } = useChat();
   const [showNewRoomModal, setShowNewRoomModal] = useState(false);
 
@@ -88,10 +94,8 @@ const Chat = ({forceRoomId}) => {
 
   return (
     <Container fluid className="h-100 py-3" style={{minHeight: 'calc(100vh - 56px)'}}>
-      {' '}
       {/* 56px ارتفاع احتمالی Navbar */}
       <Row className="h-100 flex-row-reverse gx-2">
-        {' '}
         {/* gx-2 برای فاصله کم بین ستون‌ها */}
         <Col lg={3} md={4} className="h-100 order-1 order-lg-0 d-flex flex-column">
           <Card className="flex-grow-1 d-flex flex-column">
@@ -108,7 +112,7 @@ const Chat = ({forceRoomId}) => {
                 isLoading={isLoading && rooms.length === 0} // لودینگ فقط برای بار اول
               />
               {/* نمایش کاربران آنلاین در پایین لیست چت‌ها */}
-              <OnlineUsers users={onlineUsers} />
+              {/* <OnlineUsers users={onlineUsers} /> */}
             </Card.Body>
           </Card>
         </Col>
@@ -117,21 +121,27 @@ const Chat = ({forceRoomId}) => {
             {currentRoom ? (
               <>
                 <Card.Header className="py-2">
-                  {' '}
-                  {/* کاهش padding */}
-                  <div className="d-flex flex-row-reverse align-items-center">
-                    <div className="me-3">
-                      {currentRoom.avatar ? (
-                        <img src={currentRoom.avatar} alt={currentRoom.name} className="rounded-circle" style={{width: '40px', height: '40px'}} />
-                      ) : (
-                        <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style={{width: '40px', height: '40px'}}>
-                          {currentRoom.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                  <div className="d-flex flex-row-reverse align-items-center justify-content-between">
+                    <div className="d-flex align-items-center">
+                      <div className="me-3">
+                        {currentRoom.avatar ? (
+                          <img src={currentRoom.avatar} alt={currentRoom.name} className="rounded-circle" style={{width: '40px', height: '40px'}} />
+                        ) : (
+                          <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style={{width: '40px', height: '40px'}}>
+                            {currentRoom.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h6 className="mb-0">{currentRoom.name}</h6>
+                        {currentRoom.description && <small className="text-muted">{currentRoom.description}</small>}
+                      </div>
                     </div>
                     <div>
-                      <h6 className="mb-0">{currentRoom.name}</h6>
-                      {currentRoom.description && <small className="text-muted">{currentRoom.description}</small>}
+                      {typingUsers[currentRoom.id] &&
+                        typingUsers[currentRoom.id].filter((u) => u.userId !== currentLoggedInUserId).length > 0 && ( // Filter out self
+                          <TypingIndicatorComponent users={typingUsers[currentRoom.id].filter((u) => u.userId !== currentLoggedInUserId)} />
+                        )}
                     </div>
                   </div>
                 </Card.Header>
@@ -139,7 +149,7 @@ const Chat = ({forceRoomId}) => {
                   <MessageList
                     messages={messages[currentRoom.id]?.items || []}
                     typingUsers={typingUsers[currentRoom.id] || []}
-                    isLoading={state.isLoadingMessages} // استفاده از isLoadingMessages
+                    isLoading={isLoading} 
                     hasMoreMessages={messages[currentRoom.id]?.hasMore || false}
                     onLoadMoreMessages={() => {
                       if (messages[currentRoom.id]?.hasMore) {
@@ -165,6 +175,9 @@ const Chat = ({forceRoomId}) => {
       </Row>
       {/* New Room Modal */}
       <NewRoomModal show={showNewRoomModal} onHide={() => setShowNewRoomModal(false)} onRoomCreated={handleNewRoomCreated} />
+
+      {isForwardModalVisible && messageIdToForward && <ForwardMessageModal show={isForwardModalVisible} onHide={hideForwardModal} messageIdToForward={messageIdToForward} />}
+
       {error && (
         <div className="position-fixed bottom-0 end-0 p-3" style={{zIndex: 1050}}>
           <Alert variant="danger" onClose={clearError} dismissible>

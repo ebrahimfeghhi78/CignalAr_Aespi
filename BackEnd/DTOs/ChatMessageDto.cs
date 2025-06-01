@@ -7,6 +7,7 @@ public record ChatMessageDto(
     string Content,
     string? SenderId,
     string SenderName,
+    string? SenderFullName,
     string? SenderAvatar,
     int ChatRoomId,
     MessageType Type,
@@ -14,5 +15,10 @@ public record ChatMessageDto(
     int? ReplyToMessageId,
     DateTime CreatedAt,
     bool IsEdited,
-    DateTime? EditedAt
+    DateTime? EditedAt,
+    string? RepliedMessageContent,
+    string? RepliedMessageSenderName,
+    MessageType? RepliedMessageType,
+    List<ReactionInfo>? Reactions 
 );
+public record ReactionInfo(string Emoji, string UserId, string UserName);

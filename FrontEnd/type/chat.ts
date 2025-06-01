@@ -33,6 +33,7 @@ export interface ChatMessage {
   content: string;
   senderId?: string;
   senderName: string;
+  senderFullName:string;
   senderAvatar?: string;
   chatRoomId: number;
   type: MessageType;

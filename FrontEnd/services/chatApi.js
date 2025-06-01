@@ -68,5 +68,25 @@ export const chatApi = {
   getChatRoomMembers: async (roomId) => {
     const response = await apiClient.get(`${CHAT_BASE_URL}/rooms/${roomId}/members`);
     return response.data;
-  }
+  },
+
+  editMessage: async (messageId, newContent) => {
+    const response = await apiClient.put(`${CHAT_BASE_URL}/messages/${messageId}`, { newContent });
+    return response.data;
+  },
+
+  deleteMessage: async (messageId) => {
+    const response = await apiClient.delete(`${CHAT_BASE_URL}/messages/${messageId}`);
+    return response.data; 
+  },
+
+  reactToMessage: async (messageId, reactionData) => { // reactionData: { emoji: string }
+    const response = await apiClient.post(`${CHAT_BASE_URL}/messages/${messageId}/react`, reactionData);
+    return response.data; // This should be MessageReactionDto
+  },
+
+  forwardMessage: async (originalMessageId, targetChatRoomId) => {
+    const response = await apiClient.post(`${CHAT_BASE_URL}/messages/forward`, { originalMessageId, targetChatRoomId });
+    return response.data; // Should be ChatMessageDto of the new forwarded message
+  },
 };

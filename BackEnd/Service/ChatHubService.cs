@@ -37,4 +37,9 @@ public class ChatHubService : IChatHubService
         await _hubContext.Clients.User(userId)
             .SendAsync("ReceiveChatRoomUpdate", roomDetails);
     }
+
+    public async Task SendMessageUpdateToRoom(string roomId, object payload, string eventName = "MessageUpdated")
+    {
+        await _hubContext.Clients.Group(roomId).SendAsync(eventName, payload);
+    }
 }

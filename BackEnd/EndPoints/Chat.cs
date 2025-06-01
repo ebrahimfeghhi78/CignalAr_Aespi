@@ -119,19 +119,19 @@ public class Chat : EndpointGroupBase
         });
 
         // Get online users
-        chatApi.MapGet("/users/online", async (IApplicationDbContext context) =>
+        chatApi.MapGet("/users/online", async (IApplicationDbContext context, IUser user) => // Added IUser
         {
+            var currentUserId = user.Id; // Get current user's Id
             var onlineUsers = await context.UserConnections
-                .Where(c => c.IsActive)
+                .Where(c => c.IsActive && c.UserId != currentUserId) // <--- Filter out current user
                 .Include(c => c.User)
                 .Select(c => new
                 {
                     c.User.Id,
-                    c.User.UserName,
+                    c.User.UserName, // Make sure UserName is not null
                     c.User.Avatar,
-                    c.ConnectedAt
                 })
-                .Distinct()
+                .Distinct() // Distinct should already handle duplicates if User.Id is the same.
                 .ToListAsync();
 
             return Results.Ok(onlineUsers);
@@ -140,14 +140,22 @@ public class Chat : EndpointGroupBase
         // Search users for adding to chat
         chatApi.MapGet("/users/search", async (
             string query,
-            IApplicationDbContext context) =>
+            IApplicationDbContext context,
+            IUser currentUser) => // Inject IUser
         {
+            var activeRegionId = currentUser.RegionId;
+
+            var currentUserId = currentUser.Id;
+
             var users = await context.Users
-                .Where(u => u.UserName!.Contains(query) || u.Email!.Contains(query))
+                .Where(u => u.Id != currentUserId) // Exclude self from search results
+                .Where(u => u.RegionsUsers.Any(ru => ru.RegionId == activeRegionId)) // User must be in the active region
+                .Where(u => u.UserName!.Contains(query) || u.Email!.Contains(query) || (u.FirstName + " " + u.LastName).Contains(query)) // Search by UserName, Email, or FullName
                 .Select(u => new
                 {
                     u.Id,
-                    u.UserName,
+                    UserName = u.UserName, // Ensure UserName is consistently used
+                    FullName = u.FirstName + " " + u.LastName,
                     u.Email,
                     u.Avatar
                 })
@@ -177,8 +185,47 @@ public class Chat : EndpointGroupBase
                 .ToListAsync();
 
             return Results.Ok(members);
-        })
-        ;
+        });
+
+        // Edit message
+        chatApi.MapPut("/messages/{messageId:int}", async (
+            int messageId,
+            EditMessageRequest request,
+            IMediator mediator) =>
+        {
+            var command = new EditMessageCommand(messageId, request.NewContent);
+            var result = await mediator.Send(command);
+            return Results.Ok(result);
+        }).WithName("EditChatMessage"); // Add name for easier reference
+
+        // Delete message
+        chatApi.MapDelete("/messages/{messageId:int}", async (
+            int messageId,
+            IMediator mediator) =>
+        {
+            var command = new DeleteMessageCommand(messageId);
+            await mediator.Send(command);
+            return Results.Ok(new { MessageId = messageId, Status = "Deleted" });
+        }).WithName("DeleteChatMessage");
+
+        chatApi.MapPost("/messages/{messageId:int}/react", async (
+            int messageId,
+            ReactRequest requestBody, // Define ReactRequest below
+            IMediator mediator) =>
+        {
+            var command = new ReactToMessageCommand(messageId, requestBody.Emoji);
+            var result = await mediator.Send(command);
+            return Results.Ok(result); // Returns MessageReactionDto
+        }).WithName("ReactToChatMessage");
+
+        chatApi.MapPost("/messages/forward", async (
+            ForwardMessageRequest requestBody, // Define ForwardMessageRequest below
+            IMediator mediator) =>
+        {
+            var command = new ForwardMessageCommand(requestBody.OriginalMessageId, requestBody.TargetChatRoomId);
+            var result = await mediator.Send(command);
+            return Results.Ok(result); // Returns the DTO of the new forwarded message
+        }).WithName("ForwardChatMessage");
     }
 
     // Request DTOs remain unchanged
@@ -196,4 +243,10 @@ public class Chat : EndpointGroupBase
         string? AttachmentUrl = null,
         int? ReplyToMessageId = null
     );
+
+    public record EditMessageRequest(string NewContent);
+
+    public record ReactRequest(string Emoji);
+
+    public record ForwardMessageRequest(int OriginalMessageId, int TargetChatRoomId);
 }

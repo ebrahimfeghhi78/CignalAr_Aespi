@@ -1,3 +1,5 @@
+// src/contexts/ChatContextCore.jsx
+
 import { createContext } from 'react';
 
 export const MessageDeliveryStatus = {
@@ -24,7 +26,15 @@ export const ActionTypes = {
   UPDATE_MESSAGE_READ_STATUS_FOR_SENDER: 'UPDATE_MESSAGE_READ_STATUS_FOR_SENDER',
   UPDATE_MESSAGE_AS_READ_FOR_RECEIVER: 'UPDATE_MESSAGE_AS_READ_FOR_RECEIVER',
   MARK_ALL_MESSAGES_AS_READ_IN_ROOM: 'MARK_ALL_MESSAGES_AS_READ_IN_ROOM',
-  SET_CURRENT_USER: 'SET_CURRENT_USER'
+  SET_CURRENT_USER: 'SET_CURRENT_USER',
+  EDIT_MESSAGE_SUCCESS: 'EDIT_MESSAGE_SUCCESS',
+  DELETE_MESSAGE_SUCCESS: 'DELETE_MESSAGE_SUCCESS',
+  SET_REPLYING_TO_MESSAGE: 'SET_REPLYING_TO_MESSAGE',
+  CLEAR_REPLYING_TO_MESSAGE: 'CLEAR_REPLYING_TO_MESSAGE',
+  MESSAGE_REACTION_SUCCESS: 'MESSAGE_REACTION_SUCCESS',
+  SHOW_FORWARD_MODAL: 'SHOW_FORWARD_MODAL',
+  HIDE_FORWARD_MODAL: 'HIDE_FORWARD_MODAL',
+  FORWARD_MESSAGE_SUCCESS: 'FORWARD_MESSAGE_SUCCESS',
 };
 
 // Initial state
@@ -38,7 +48,10 @@ export const initialState = {
   isLoading: false,
   isLoadingMessages: false,
   error: null,
-  currentLoggedInUserId: null
+  currentLoggedInUserId: null,
+  replyingToMessage: null, // { id, content, senderName, type, ... }
+  isForwardModalVisible: false,
+  messageIdToForward: null,
 };
 
 export const ChatContext = createContext();

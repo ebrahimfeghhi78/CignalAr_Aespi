@@ -76,20 +76,33 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
         var senderUser = await _context.Users.FindAsync(new object[] { senderUserId! }, cancellationToken);
         if (senderUser == null) { /* Handle error, sender not found */ }
 
+        ChatMessage? repliedMessage = null;
+        if (message.ReplyToMessageId.HasValue)
+        {
+            repliedMessage = await _context.ChatMessages
+                .Include(rpm => rpm.Sender)
+                .FirstOrDefaultAsync(rpm => rpm.Id == message.ReplyToMessageId.Value, cancellationToken);
+        }
 
         var messageDto = new ChatMessageDto(
             message.Id,
             message.Content,
             message.SenderId,
             senderUser!.UserName!,
+            $"{senderUser.FirstName} {senderUser.LastName}",  // Added SenderFullName
             senderUser.Avatar,
             message.ChatRoomId,
             message.Type,
             message.AttachmentUrl,
             message.ReplyToMessageId,
-            message.Created, // زمان از پیام ذخیره شده خوانده شود
+            message.Created,
             message.IsEdited,
-            message.EditedAt
+            message.EditedAt,
+            // Populate replied message info for the new message DTO being broadcasted
+            repliedMessage == null ? null : (repliedMessage.Content.Length > 70 ? repliedMessage.Content.Substring(0, 70) + "..." : repliedMessage.Content),
+            repliedMessage == null ? null : repliedMessage.Sender.UserName,
+            repliedMessage == null ? null : repliedMessage.Type,
+            new List<ReactionInfo>()
         );
 
         // ارسال پیام به تمام کانکشن‌های اعضای گروه در SignalR

@@ -16,7 +16,7 @@
   border-left: 1px solid #e9ecef;
   min-width: 260px;
   max-width: 340px;
-  box-shadow: 0 0 16px 0 rgba(0,0,0,0.04);
+  box-shadow: 0 0 16px 0 rgba(0, 0, 0, 0.04);
   z-index: 1100;
 }
 
@@ -25,7 +25,7 @@
     min-width: 0;
     max-width: 100vw;
     width: 80vw;
-    box-shadow: 0 0 32px 0 rgba(0,0,0,0.12);
+    box-shadow: 0 0 32px 0 rgba(0, 0, 0, 0.12);
   }
 }
 
@@ -44,7 +44,7 @@
   height: 48px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
 }
 
 .chat-main {
@@ -70,7 +70,7 @@
   padding: 0.7rem 1.1rem;
   margin-bottom: 0.2rem;
   font-size: 1rem;
-  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.03);
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
   position: relative;
   word-break: break-word;
   transition: background 0.2s;
@@ -124,7 +124,9 @@
 }
 
 @keyframes typing {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0);
     opacity: 0.5;
   }
@@ -196,7 +198,7 @@
 }
 
 .file-drop-zone.drag-over {
-  border-color: #419FD9;
+  border-color: #419fd9;
   background-color: #f8f9fa;
 }
 
@@ -237,8 +239,8 @@
 }
 
 .list-group-item.active {
-  background-color: #419FD9;
-  border-color: #419FD9;
+  background-color: #419fd9;
+  border-color: #419fd9;
 }
 
 /* Message status indicators */
@@ -251,7 +253,7 @@
 }
 
 .message-status-read {
-  color: #419FD9;
+  color: #419fd9;
 }
 
 /* Attachment preview */
@@ -275,13 +277,27 @@ audio {
 }
 
 /* File icon colors */
-.file-icon-image { color: #28a745; }
-.file-icon-video { color: #dc3545; }
-.file-icon-audio { color: #ffc107; }
-.file-icon-pdf { color: #dc3545; }
-.file-icon-word { color: #419FD9; }
-.file-icon-excel { color: #28a745; }
-.file-icon-default { color: #6c757d; }
+.file-icon-image {
+  color: #28a745;
+}
+.file-icon-video {
+  color: #dc3545;
+}
+.file-icon-audio {
+  color: #ffc107;
+}
+.file-icon-pdf {
+  color: #dc3545;
+}
+.file-icon-word {
+  color: #419fd9;
+}
+.file-icon-excel {
+  color: #28a745;
+}
+.file-icon-default {
+  color: #6c757d;
+}
 
 /* Loading states */
 .loading-skeleton {
@@ -291,8 +307,12 @@ audio {
 }
 
 @keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Chat header */
@@ -315,7 +335,7 @@ audio {
 }
 
 .message-sent {
-  background-color: #EFFDDE;
+  background-color: #effdde;
   color: black;
   align-self: flex-end;
   border-bottom-right-radius: 0.25rem;
@@ -354,7 +374,7 @@ audio {
 }
 
 .chat-input:focus {
-  border-color: #419FD9;
+  border-color: #419fd9;
 }
 
 /* Chat actions */
@@ -376,13 +396,13 @@ audio {
 
 .chat-action-button:hover {
   background-color: #f8f9fa;
-  color: #419FD9;
+  color: #419fd9;
 }
 
 .chat-send-button {
   padding: 0.75rem;
   border: none;
-  background-color: #419FD9;
+  background-color: #419fd9;
   color: white;
   border-radius: 50%;
   cursor: pointer;
@@ -439,12 +459,12 @@ audio {
 }
 
 /* RTL Support */
-[dir="rtl"] .message-sent {
+[dir='rtl'] .message-sent {
   border-bottom-left-radius: 0.25rem;
   border-bottom-right-radius: 1rem;
 }
 
-[dir="rtl"] .message-received {
+[dir='rtl'] .message-received {
   border-bottom-right-radius: 0.25rem;
   border-bottom-left-radius: 1rem;
 }
@@ -498,7 +518,7 @@ audio {
 
 .search-input:focus {
   background-color: #fff !important;
-  border-color: #419FD9;
+  border-color: #419fd9;
   box-shadow: 0 0 0 0.15rem rgba(65, 159, 217, 0.15);
 }
 
@@ -523,14 +543,30 @@ audio {
 }
 
 /* File type icons colors */
-.bi-file-pdf { color: #dc3545; }
-.bi-file-word { color: #0d6efd; }
-.bi-file-excel { color: #198754; }
-.bi-file-ppt { color: #fd7e14; }
-.bi-file-zip { color: #6c757d; }
-.bi-file-music { color: #6f42c1; }
-.bi-file-play { color: #0dcaf0; }
-.bi-file-image { color: #20c997; }
+.bi-file-pdf {
+  color: #dc3545;
+}
+.bi-file-word {
+  color: #0d6efd;
+}
+.bi-file-excel {
+  color: #198754;
+}
+.bi-file-ppt {
+  color: #fd7e14;
+}
+.bi-file-zip {
+  color: #6c757d;
+}
+.bi-file-music {
+  color: #6f42c1;
+}
+.bi-file-play {
+  color: #0dcaf0;
+}
+.bi-file-image {
+  color: #20c997;
+}
 
 /* Image/Video preview */
 .media-preview {
@@ -601,4 +637,15 @@ audio {
   border-radius: 2px;
   background: #0d6efd;
   transition: width 0.3s ease;
+}
+
+.message-options-dropdown .dropdown-toggle::after {
+  display: none; /* Hide default bootstrap caret */
+}
+.message-item-wrapper:hover .message-options-dropdown {
+  opacity: 1;
+}
+.message-options-dropdown {
+  opacity: 0; /* Hidden by default, shown on hover */
+  transition: opacity 0.2s ease-in-out;
 }

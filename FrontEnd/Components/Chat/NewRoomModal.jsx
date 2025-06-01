@@ -28,17 +28,17 @@ const NewRoomModal = ({show, onHide, onRoomCreated}) => {
   useEffect(() => {
     if (show) {
       setFormData({
-        name: '',
+        name: '', // Group name
         description: '',
-        isGroup: false,
+        isGroup: true, // Default to group
         memberIds: [],
-        regionId: null,
+        regionId: null, // Will be set by backend based on active region
       });
       setSelectedUsers([]);
       setSearchQuery('');
       setSearchResults([]);
       setError('');
-      setActiveTab('personal');
+      // setActiveTab('group'); // No tabs needed if only for groups
     }
   }, [show]);
 
@@ -76,35 +76,21 @@ const NewRoomModal = ({show, onHide, onRoomCreated}) => {
   };
 
   const handleUserSelect = (user) => {
-    if (activeTab === 'personal') {
-      // For personal chat, only allow one user
-      setSelectedUsers([user]);
+    // Modified for group members
+    if (selectedUsers.find((u) => u.id === user.id)) {
+      const newSelected = selectedUsers.filter((u) => u.id !== user.id);
+      setSelectedUsers(newSelected);
       setFormData((prev) => ({
         ...prev,
-        name: user.userName,
-        memberIds: [user.id],
-        isGroup: false,
+        memberIds: newSelected.map((u) => u.id),
       }));
     } else {
-      // For group chat, allow multiple users
-      if (selectedUsers.find((u) => u.id === user.id)) {
-        // Remove user
-        const newSelected = selectedUsers.filter((u) => u.id !== user.id);
-        setSelectedUsers(newSelected);
-        setFormData((prev) => ({
-          ...prev,
-          memberIds: newSelected.map((u) => u.id),
-        }));
-      } else {
-        // Add user
-        const newSelected = [...selectedUsers, user];
-        setSelectedUsers(newSelected);
-        setFormData((prev) => ({
-          ...prev,
-          memberIds: newSelected.map((u) => u.id),
-          isGroup: true,
-        }));
-      }
+      const newSelected = [...selectedUsers, user];
+      setSelectedUsers(newSelected);
+      setFormData((prev) => ({
+        ...prev,
+        memberIds: newSelected.map((u) => u.id),
+      }));
     }
   };
 
@@ -112,34 +98,30 @@ const NewRoomModal = ({show, onHide, onRoomCreated}) => {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (activeTab === 'personal' && selectedUsers.length === 0) {
-      setError('لطفاً یک کاربر انتخاب کنید');
+    if (!formData.name.trim()) {
+      setError('نام گروه الزامی است');
       return;
     }
-
-    if (activeTab === 'group') {
-      if (!formData.name.trim()) {
-        setError('نام گروه الزامی است');
-        return;
-      }
-      if (selectedUsers.length === 0) {
-        setError('حداقل یک عضو برای گروه انتخاب کنید');
-        return;
-      }
+    if (selectedUsers.length === 0) {
+      setError('حداقل یک عضو برای گروه انتخاب کنید');
+      return;
     }
 
     try {
       setIsLoading(true);
       const roomData = {
-        ...formData,
-        isGroup: activeTab === 'group',
+        // Ensure this data is for a group
+        name: formData.name,
+        description: formData.description,
+        isGroup: true,
+        memberIds: selectedUsers.map((u) => u.id),
+        // regionId is handled by backend
       };
 
       const newRoom = await createChatRoom(roomData);
-      onRoomCreated(newRoom);
+      onRoomCreated(newRoom); // This should close the modal and potentially select the new room
     } catch (error) {
-      setError(error.message || 'خطا در ایجاد چت');
+      setError(error.message || 'خطا در ایجاد گروه');
     } finally {
       setIsLoading(false);
     }
@@ -157,159 +139,83 @@ const NewRoomModal = ({show, onHide, onRoomCreated}) => {
   return (
     <Modal show={show} onHide={onHide} size="lg" centered>
       <Modal.Header closeButton>
-        <Modal.Title>چت جدید</Modal.Title>
+        <Modal.Title>گروه جدید</Modal.Title> {/* Changed title */}
       </Modal.Header>
 
       <Modal.Body>
-        <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k)} className="mb-3">
-          <Tab eventKey="personal" title="چت شخصی">
-            <Form onSubmit={handleSubmit}>
-              {/* Search Users */}
-              <Form.Group className="mb-3">
-                <Form.Label>جستجوی کاربران</Form.Label>
-                <Form.Control type="text" placeholder="نام یا نام کاربری را وارد کنید..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                <Form.Text className="text-muted">حداقل 2 کاراکتر وارد کنید</Form.Text>
-              </Form.Group>
+        {/* Form for Group Creation directly, no tabs */}
+        <Form onSubmit={handleSubmit}>
+          {/* Group Name */}
+          <Form.Group className="mb-3">
+            <Form.Label>نام گروه *</Form.Label>
+            <Form.Control type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="نام گروه را وارد کنید" required />
+          </Form.Group>
 
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="mb-3">
-                  <Form.Label>نتایج جستجو</Form.Label>
-                  <ListGroup style={{maxHeight: '200px', overflowY: 'auto'}}>
-                    {searchResults.map((user) => {
-                      const isUserOnline = onlineUsers.some((onlineUser) => onlineUser.id === user.id); // بررسی آنلاین بودن
-                      return (
-                        <ListGroup.Item key={user.id} action active={selectedUsers.some((u) => u.id === user.id)} onClick={() => handleUserSelect(user)} className="d-flex align-items-center">
-                          <div className="me-3">
-                            {user.avatar ? (
-                              <img src={user.avatar} alt={user.userName} className="rounded-circle" style={{width: '40px', height: '40px'}} />
-                            ) : (
-                              <div className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style={{width: '40px', height: '40px'}}>
-                                {user.userName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
+          {/* Group Description */}
+          <Form.Group className="mb-3">
+            <Form.Label>توضیحات</Form.Label>
+            <Form.Control as="textarea" rows={2} name="description" value={formData.description} onChange={handleInputChange} placeholder="توضیحات اختیاری برای گروه" />
+          </Form.Group>
+
+          {/* Search Users for group members */}
+          <Form.Group className="mb-3">
+            <Form.Label>افزودن اعضا</Form.Label>
+            <Form.Control type="text" placeholder="نام یا نام کاربری را وارد کنید..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </Form.Group>
+
+          {/* Selected Members Preview */}
+          {selectedUsers.length > 0 && (
+            <div className="mb-3">
+              <Form.Label>اعضای انتخاب شده ({selectedUsers.length})</Form.Label>
+              <div className="d-flex flex-wrap gap-2">
+                {selectedUsers.map((user) => (
+                  <Badge key={user.id} bg="primary" className="d-flex align-items-center gap-1 p-2">
+                    {user.userName}
+                    <Button variant="link" size="sm" className="p-0 text-white" onClick={() => removeSelectedUser(user.id)}>
+                      <i className="bi bi-x"></i>
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Search Results for group members */}
+          {(isSearching || searchResults.length > 0) && (
+            <div className="mb-3">
+              <Form.Label>نتایج جستجو</Form.Label>
+              {isSearching && <div className="text-center text-muted">در حال جستجو...</div>}
+              <ListGroup style={{maxHeight: '200px', overflowY: 'auto'}}>
+                {searchResults.map((user) => {
+                  const isSelected = selectedUsers.some((su) => su.id === user.id);
+                  return (
+                    <ListGroup.Item key={user.id} action active={isSelected} onClick={() => handleUserSelect(user)} className="d-flex align-items-center">
+                      {/* ... user display with avatar and name ... */}
+                      <div className="me-3">
+                        {user.avatar ? (
+                          <img src={user.avatar} alt={user.userName} className="rounded-circle" style={{width: '32px', height: '32px'}} />
+                        ) : (
+                          <div className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px', fontSize: '0.8rem'}}>
+                            {user.userName?.charAt(0).toUpperCase()}
                           </div>
-                          <div className="flex-grow-1">
-                            <div className="fw-semibold">{user.userName}</div>
-                            {user.fullName && <small className="text-muted">{user.fullName}</small>}
-                          </div>
-                          {isUserOnline && ( // نمایش وضعیت آنلاین
-                            <Badge bg="success" pill className="ms-2">
-                              آنلاین
-                            </Badge>
-                          )}
-                        </ListGroup.Item>
-                      );
-                    })}
-                  </ListGroup>
-                </div>
-              )}
-
-              {isSearching && <div className="text-center text-muted mb-3">در حال جستجو...</div>}
-
-              {/* Selected User */}
-              {selectedUsers.length > 0 && (
-                <div className="mb-3">
-                  <Form.Label>کاربر انتخاب شده</Form.Label>
-                  <div className="d-flex align-items-center p-2 bg-light rounded">
-                    <div className="me-3">
-                      {selectedUsers[0].avatar ? (
-                        <img src={selectedUsers[0].avatar} alt={selectedUsers[0].userName} className="rounded-circle" style={{width: '40px', height: '40px'}} />
-                      ) : (
-                        <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style={{width: '40px', height: '40px'}}>
-                          {selectedUsers[0].userName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-grow-1">
-                      <div className="fw-semibold">{selectedUsers[0].userName}</div>
-                      {selectedUsers[0].fullName && <small className="text-muted">{selectedUsers[0].fullName}</small>}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Form>
-          </Tab>
-
-          <Tab eventKey="group" title="گروه">
-            <Form onSubmit={handleSubmit}>
-              {/* Group Name */}
-              <Form.Group className="mb-3">
-                <Form.Label>نام گروه *</Form.Label>
-                <Form.Control type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="نام گروه را وارد کنید" required />
-              </Form.Group>
-
-              {/* Group Description */}
-              <Form.Group className="mb-3">
-                <Form.Label>توضیحات</Form.Label>
-                <Form.Control as="textarea" rows={2} name="description" value={formData.description} onChange={handleInputChange} placeholder="توضیحات اختیاری برای گروه" />
-              </Form.Group>
-
-              {/* Search Users */}
-              <Form.Group className="mb-3">
-                <Form.Label>جستجوی اعضا</Form.Label>
-                <Form.Control type="text" placeholder="نام یا نام کاربری را وارد کنید..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              </Form.Group>
-
-              {/* Selected Members */}
-              {searchResults.length > 0 && (
-                <div className="mb-3">
-                  <Form.Label>اعضای انتخاب شده ({selectedUsers.length})</Form.Label>
-                  <div className="d-flex flex-wrap gap-2">
-                    {selectedUsers.map((user) => (
-                      <Badge key={user.id} bg="primary" className="d-flex align-items-center gap-1 p-2">
-                        {user.userName}
-                        <Button variant="link" size="sm" className="p-0 text-white" onClick={() => removeSelectedUser(user.id)}>
-                          <i className="bi bi-x"></i>
-                        </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="mb-3">
-                  <Form.Label>نتایج جستجو</Form.Label>
-                  <ListGroup style={{maxHeight: '200px', overflowY: 'auto'}}>
-                    {searchResults.map((user) => {
-                      const isUserOnline = onlineUsers.some((onlineUser) => onlineUser.id === user.id); // بررسی آنلاین بودن
-                      return (
-                        <ListGroup.Item key={user.id} action active={selectedUsers.some((u) => u.id === user.id)} onClick={() => handleUserSelect(user)} className="d-flex align-items-center">
-                          <div className="me-3">
-                            {user.avatar ? (
-                              <img src={user.avatar} alt={user.userName} className="rounded-circle" style={{width: '32px', height: '32px'}} />
-                            ) : (
-                              <div className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}>
-                                {user.userName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-grow-1">
-                            <div className="fw-semibold">{user.userName}</div>
-                            {user.fullName && <small className="text-muted">{user.fullName}</small>}
-                          </div>
-                          {isUserOnline &&
-                            !selectedUsers.some((su) => su.id === user.id) && ( // نمایش وضعیت آنلاین اگر انتخاب نشده
-                              <Badge bg="success" pill className="ms-auto me-2">
-                                آنلاین
-                              </Badge>
-                            )}
-                          {selectedUsers.some((u) => u.id === user.id) && <i className="bi bi-check-circle-fill text-primary ms-auto"></i>}
-                        </ListGroup.Item>
-                      );
-                    })}
-                  </ListGroup>
-                </div>
-              )}
-            </Form>
-          </Tab>
-        </Tabs>
-
+                        )}
+                      </div>
+                      <div className="flex-grow-1">
+                        <div className="fw-semibold">{user.userName}</div>
+                        {user.fullName && <small className="text-muted">{user.fullName}</small>}
+                      </div>
+                      {isSelected && <i className="bi bi-check-circle-fill text-primary ms-auto"></i>}
+                    </ListGroup.Item>
+                  );
+                })}
+              </ListGroup>
+            </div>
+          )}
+          {!isSearching && searchQuery.length >= 2 && searchResults.length === 0 && <div className="text-muted mb-3">کاربری یافت نشد.</div>}
+        </Form>
         {/* Error Alert */}
         {error && (
-          <Alert variant="danger" className="mb-3">
+          <Alert variant="danger" className="mt-3">
             {error}
           </Alert>
         )}
@@ -319,8 +225,8 @@ const NewRoomModal = ({show, onHide, onRoomCreated}) => {
         <Button variant="secondary" onClick={onHide}>
           انصراف
         </Button>
-        <Button variant="primary" onClick={handleSubmit} disabled={isLoading || (activeTab === 'personal' ? selectedUsers.length === 0 : !formData.name.trim() || selectedUsers.length === 0)}>
-          {isLoading ? 'در حال ایجاد...' : 'ایجاد چت'}
+        <Button variant="primary" type="submit" onClick={handleSubmit} disabled={isLoading || !formData.name.trim() || selectedUsers.length === 0}>
+          {isLoading ? 'در حال ایجاد...' : 'ایجاد گروه'}
         </Button>
       </Modal.Footer>
     </Modal>

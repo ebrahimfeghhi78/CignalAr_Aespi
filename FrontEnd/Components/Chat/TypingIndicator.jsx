@@ -3,7 +3,7 @@ const TypingIndicator = ({ users }) => {
 
   const getTypingText = () => {
     if (users.length === 1) {
-      return `${users[0].userName} در حال تایپ است...`;
+      return `در حال تایپ`;
     } else if (users.length === 2) {
       return `${users[0].userName} و ${users[1].userName} در حال تایپ هستند...`;
     } else {

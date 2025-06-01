@@ -4,7 +4,6 @@
 import React, {useEffect, useRef, useCallback} from 'react'; // useCallback اضافه شد
 import {Spinner, Button} from 'react-bootstrap'; // Button اضافه شد
 import MessageItem from './MessageItem';
-import TypingIndicator from './TypingIndicator';
 
 const MessageList = ({messages, typingUsers, isLoading, hasMoreMessages, onLoadMoreMessages}) => {
   const messagesEndRef = useRef(null);
@@ -90,6 +89,7 @@ const MessageList = ({messages, typingUsers, isLoading, hasMoreMessages, onLoadM
         currentGroup = {
           senderId: message.senderId,
           senderName: message.senderName,
+          senderFullName:message.senderFullName,
           senderAvatar: message.senderAvatar,
           messages: [message],
           lastMessage: message,
@@ -168,7 +168,6 @@ const MessageList = ({messages, typingUsers, isLoading, hasMoreMessages, onLoadM
               </div>
             );
           })}
-          {typingUsers.length > 0 && <TypingIndicator users={typingUsers} />}
           <div ref={messagesEndRef} />
         </>
       )}

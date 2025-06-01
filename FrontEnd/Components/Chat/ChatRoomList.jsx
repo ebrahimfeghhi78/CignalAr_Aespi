@@ -1,15 +1,91 @@
 // src/components/Chat/ChatRoomList.jsx
 // Component for displaying list of chat rooms
-
-import React, {useState} from 'react';
-import {ListGroup, Button, Form, Spinner, Badge} from 'react-bootstrap';
-import {BiPlus} from 'react-icons/bi';
+import React, {useState, useEffect} from 'react';
+import {ListGroup, Button, Form, Spinner, Badge, Dropdown} from 'react-bootstrap';
+import {BiPlus, BiSearch} from 'react-icons/bi';
 import {BsPeopleFill, BsFillPersonFill} from 'react-icons/bs';
+import {useChat} from '../../hooks/useChat'; // Import useChat
+import {chatApi} from '../../services/chatApi'; // Import chatApi
+
 const ChatRoomList = ({rooms, currentRoom, onRoomSelect, onNewRoom, isLoading}) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const {setCurrentRoom: contextSetCurrentRoom, createChatRoom, rooms: contextRooms} = useChat();
 
   // Filter rooms based on search term
   const filteredRooms = rooms.filter((room) => room.name.toLowerCase().includes(searchTerm.toLowerCase()) || (room.description && room.description.toLowerCase().includes(searchTerm.toLowerCase())));
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (userSearchTerm.trim().length >= 2) {
+        setIsSearchingUsers(true);
+        try {
+          const users = await chatApi.searchUsers(userSearchTerm);
+          setUserSearchResults(users || []);
+        } catch (error) {
+          console.error('Error searching users:', error);
+          setUserSearchResults([]);
+        } finally {
+          setIsSearchingUsers(false);
+        }
+      } else {
+        setUserSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [userSearchTerm]);
+
+  const handleUserSelectForChat = async (selectedUser) => {
+    setUserSearchTerm(''); // Clear search
+    setUserSearchResults([]);
+
+    // Check if a private chat with this user already exists
+    const existingRoom = contextRooms.find(
+      (room) =>
+        !room.isGroup &&
+        room.members && // Ensure members array exists (should be provided by GetChatRoomsQuery)
+        room.members.some((member) => member.id === selectedUser.id) &&
+        room.members.length === 2 // Private chats usually have 2 members (current user + selectedUser)
+      // This part needs careful checking of how `room.members` is structured.
+      // A more robust check would be to see if the room name matches selectedUser.userName (if that's the convention)
+      // Or, if the backend returns participant IDs directly in the ChatRoomDto.
+      // For now, let's assume the backend logic for finding existing rooms is primary.
+    );
+
+    // A simplified frontend check based on room name for non-group chats (assuming name = other user's name)
+    const existingPrivateChat = contextRooms.find(
+      (room) => !room.isGroup && room.name === selectedUser.userName // Or however private chats are named
+    );
+
+    if (existingPrivateChat) {
+      onRoomSelect(existingPrivateChat);
+    } else {
+      try {
+        // Create a new private chat room
+        // The name of the room will be the other user's username for the creator.
+        // The backend will handle setting the correct name for the other participant.
+        const newRoomDto = await createChatRoom({
+          name: selectedUser.userName, // Initial name for the creator
+          isGroup: false,
+          memberIds: [selectedUser.id],
+          // regionId will be handled by backend based on creator's active region
+        });
+        if (newRoomDto) {
+          // The useChat hook's createChatRoom should ideally update the rooms list via SignalR or an explicit dispatch.
+          // If not, you might need to manually add/update the room in the local state or re-fetch rooms.
+          // For now, we expect `createChatRoom` from context to handle state updates,
+          // then we select the new room.
+          onRoomSelect(newRoomDto); // Select the newly created room
+        }
+      } catch (error) {
+        console.error('Error creating chat room:', error);
+        // Handle error (e.g., show a notification)
+      }
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -33,14 +109,47 @@ const ChatRoomList = ({rooms, currentRoom, onRoomSelect, onNewRoom, isLoading}) 
 
   return (
     <div className="d-flex flex-column h-100">
-      {/* Search and New Room Button */}
       <div className="p-3 border-bottom">
         <div className="d-flex gap-2 mb-2">
-          <Form.Control type="text" placeholder="جستجو..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} size="sm" className="search-input" />
-          <Button variant="primary" size="sm" onClick={onNewRoom} className="flex-shrink-0">
-            <BiPlus size={20} />
+          {/* Room Filter Input */}
+          <Form.Control type="text" placeholder="فیلتر چت‌ها..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} size="sm" className="search-input" />
+          {/* New Group Button */}
+          <Button variant="primary" size="sm" onClick={onNewRoom} className="flex-shrink-0" title="ایجاد گروه جدید">
+            <BsPeopleFill size={18} /> <span className="d-none d-md-inline">گروه</span>
           </Button>
         </div>
+        {/* User Search Input for Private Chat */}
+        <Dropdown>
+          <Dropdown.Toggle
+            as={Form.Control}
+            type="text"
+            placeholder="جستجوی کاربر برای چت شخصی..."
+            value={userSearchTerm}
+            onChange={(e) => setUserSearchTerm(e.target.value)}
+            size="sm"
+            className="search-input mt-2"
+          ></Dropdown.Toggle>
+          <Dropdown.Menu show={userSearchResults.length > 0 || isSearchingUsers} style={{width: '100%'}}>
+            {isSearchingUsers && <Dropdown.ItemText>در حال جستجو...</Dropdown.ItemText>}
+            {userSearchResults.map((user) => (
+              <Dropdown.Item key={user.id} onClick={() => handleUserSelectForChat(user)}>
+                <div className="d-flex align-items-center">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.userName} className="rounded-circle me-2" style={{width: '30px', height: '30px'}} />
+                  ) : (
+                    <div className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" style={{width: '30px', height: '30px', fontSize: '0.8rem'}}>
+                      {user.userName?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span>
+                    {user.userName} ({user.fullName})
+                  </span>
+                </div>
+              </Dropdown.Item>
+            ))}
+            {!isSearchingUsers && userSearchTerm.length >= 2 && userSearchResults.length === 0 && <Dropdown.ItemText>کاربری یافت نشد.</Dropdown.ItemText>}
+          </Dropdown.Menu>
+        </Dropdown>
       </div>
 
       {/* Rooms List */}

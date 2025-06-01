@@ -23,6 +23,10 @@ public class GetChatMessagesQueryHandler : IRequestHandler<GetChatMessagesQuery,
         var messages = await _context.ChatMessages
             .Where(m => m.ChatRoomId == request.ChatRoomId && !m.IsDeleted)
             .Include(m => m.Sender)
+            .Include(m => m.ReplyToMessage)
+            .ThenInclude(rpm => rpm!.Sender)
+            .Include(m => m.Reactions) // Include reactions
+            .ThenInclude(r => r.User) // Include user who reacted
             .OrderByDescending(m => m.Created)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
@@ -31,6 +35,7 @@ public class GetChatMessagesQueryHandler : IRequestHandler<GetChatMessagesQuery,
                 m.Content,
                 m.SenderId,
                 m.Sender.UserName!,
+                m.Sender.FirstName + " " + m.Sender.LastName,
                 m.Sender.Avatar,
                 m.ChatRoomId,
                 m.Type,
@@ -38,10 +43,15 @@ public class GetChatMessagesQueryHandler : IRequestHandler<GetChatMessagesQuery,
                 m.ReplyToMessageId,
                 m.Created,
                 m.IsEdited,
-                m.EditedAt
+                m.EditedAt,
+                // Populate replied message info
+                m.ReplyToMessage == null ? null : (m.ReplyToMessage.Content.Length > 70 ? m.ReplyToMessage.Content.Substring(0, 70) + "..." : m.ReplyToMessage.Content),
+                m.ReplyToMessage == null ? null : m.ReplyToMessage.Sender.UserName,
+                m.ReplyToMessage == null ? null : m.ReplyToMessage.Type,
+                m.Reactions.Select(r => new ReactionInfo(r.Emoji, r.UserId!, r.User.UserName!)).ToList()
             ))
             .ToListAsync(cancellationToken);
 
-        return messages.OrderBy(m => m.CreatedAt).ToList();
+        return messages.OrderBy(m => m.CreatedAt).ToList(); // Return in ascending order for display
     }
 }
